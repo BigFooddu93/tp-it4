@@ -10,16 +10,16 @@ En utilisant la ligne de commande (CLI) de votre OS : ipconfig /allcompartments 
 
 **- interface Wifi:**
 
-- nom, adresse MAC . . . . . . . . . . . :AC-82-47-F8-58-9A
-- adresse IP de l'interface WiFi . . . . :10.33.16.200
+- nom, adresse MAC : AC-82-47-F8-58-9A
+- adresse IP de l'interface WiFi : 10.33.16.200
 
 **- interface Ethernet**
 
-- nom, adresse MAC . . . . . . . . . . . :absence de carte éternet 
-- adresse IP . . . . . . . . . . . . . . :absence de carte éternet
+- nom, adresse MAC : absence de carte éternet 
+- adresse IP : absence de carte éternet
 
 **🌞 Affichez votre gateway**
-- gateway. . . . . . . . . . . . . . . . : 10.33.19.254
+- gateway : 10.33.19.254
 
 **🌞 Déterminer la MAC de la passerelle**
 
