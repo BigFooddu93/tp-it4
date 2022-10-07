@@ -195,10 +195,10 @@ Address:  78.34.2.17
 
 n'as pas été réalise en raison d'une absence de port Ethernet sur ma machine (même si j'ai pue le voir avec Yohan et Baptiste qui eux pouvais le faire)
 
-![cap](https://github.com/BigFooddu93/tp-reso/blob/main/capture/1.png)
+![cap](https://github.com/BigFooddu93/tp-reso/blob/main/tp1/capture/1.png)
 
-![cap](https://github.com/BigFooddu93/tp-reso/blob/main/capture/2.png)
+![cap](https://github.com/BigFooddu93/tp-reso/blob/main/tp1/capture/2.png)
 
 Essai nslookup blendermarket.com :
 
-![capture](https://github.com/BigFooddu93/tp-reso/blob/main/capture/3.png)
+![capture](https://github.com/BigFooddu93/tp-reso/blob/main/tp1/capture/3.png)
