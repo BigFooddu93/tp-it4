@@ -1,51 +1,59 @@
 # TP3 : On va router des trucs
 ## 0. Prérequis
 
-➜ Pour ce TP, on va se servir de VMs Rocky Linux. 1Go RAM c'est large large. Vous pouvez redescendre la mémoire vidéo aussi.  
-
-➜ Vous aurez besoin de deux réseaux host-only dans VirtualBox :
-
-- un premier réseau `10.3.1.0/24`
-- le second `10.3.2.0/24`
 
 ## I. ARP
-
-Première partie simple, on va avoir besoin de 2 VMs.
-
-| Machine  | `10.3.1.0/24` |
-|----------|---------------|
-| `john`   | `10.3.1.11`   |
-| `marcel` | `10.3.1.12`   |
-
-```schema
-   john               marcel
-  ┌─────┐             ┌─────┐
-  │     │    ┌───┐    │     │
-  │     ├────┤ho1├────┤     │
-  └─────┘    └───┘    └─────┘
-```
 
 ### 1. Echange ARP
 
 🌞**Générer des requêtes ARP**
 
 - effectuer un `ping` d'une machine à l'autre
+```
+$ ping 10.3.1.11
+PING 10.3.1.11 (10.3.1.11) 56(84) bytes of data.
+64 bytes from 10.3.1.11: icmp_seq=1 ttl=64 times=1.06
+```
 - observer les tables ARP des deux machines
-- repérer l'adresse MAC de `john` dans la table ARP de `marcel` et vice-versa
+```
+$ ip neight show //from marcel
+10.3.1.11 dev enp0s8 lladdr 08:00:27:51:f2:b5 STALE
+```
+``` 
+$ ip neigh show //from john
+10.3.1.12 dev enp0s8 lladdr 08:00:27:cb:e1:e9 STALE
+```
 - prouvez que l'info est correcte (que l'adresse MAC que vous voyez dans la table est bien celle de la machine correspondante)
   - une commande pour voir la MAC de `marcel` dans la table ARP de `john`
+  ```
+  $ ip neigh show 10.3.1.12
+  10.3.1.12 dev enp0s8 lladdr 08:00:27:cb:e1:e9 STALE
+  ```
   - et une commande pour afficher la MAC de `marcel`, depuis `marcel`
+  ```
+  $ ip a //in 2: enp0s8
+  link/ether 08:00:27:cb:e1:e9 brd ff:ff:ff:ff:ff:ff
+  ```
 
 ### 2. Analyse de trames
 
 🌞**Analyse de trames**
 
-- utilisez la commande `tcpdump` pour réaliser une capture de trame
-- videz vos tables ARP, sur les deux machines, puis effectuez un `ping`
-
-🦈 **Capture réseau `tp3_arp.pcapng`** qui contient un ARP request et un ARP reply
-
-> **Si vous ne savez pas comment récupérer votre fichier `.pcapng`** sur votre hôte afin de l'ouvrir dans Wireshark, et me le livrer en rendu, demandez-moi.
+```
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on enp0s8, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:59:39.100677 ARP, Request who-has localhost.localdomain tell 10.3.1.12, length 46
+10:59:39.100694 ARP, Reply localhost.localdomain is-at 08:00:27:51:f2:b5 (oui Unknown), length 28
+10:59:39.100892 IP 10.3.1.12 > localhost.localdomain: ICMP echo request, id 4, seq 1, length 64
+10:59:39.100937 IP localhost.localdomain > 10.3.1.12: ICMP echo reply, id 4, seq 1, length 64
+10:59:40.147782 IP 10.3.1.12 > localhost.localdomain: ICMP echo request, id 4, seq 2, length 64
+10:59:40.147820 IP localhost.localdomain > 10.3.1.12: ICMP echo reply, id 4, seq 2, length 64
+10:59:41.172525 IP 10.3.1.12 > localhost.localdomain: ICMP echo request, id 4, seq 3, length 64
+10:59:41.172572 IP localhost.localdomain > 10.3.1.12: ICMP echo reply, id 4, seq 3, length 64
+10:59:42.196760 IP 10.3.1.12 > localhost.localdomain: ICMP echo request, id 4, seq 4, length 64
+10:59:42.196817 IP localhost.localdomain > 10.3.1.12: ICMP echo reply, id 4, seq 4, length 64
+```
 
 ## II. Routage
 
@@ -56,8 +64,6 @@ Vous aurez besoin de 3 VMs pour cette partie. **Réutilisez les deux VMs précé
 | `router` | `10.3.1.254`  | `10.3.2.254`  |
 | `john`   | `10.3.1.11`   | no            |
 | `marcel` | no            | `10.3.2.12`   |
-
-> Je les appelés `marcel` et `john` PASKON EN A MAR des noms nuls en réseau 🌻
 
 ```schema
    john                router              marcel
@@ -71,17 +77,63 @@ Vous aurez besoin de 3 VMs pour cette partie. **Réutilisez les deux VMs précé
 
 🌞**Activer le routage sur le noeud `router`**
 
-> Cette étape est nécessaire car Rocky Linux c'est pas un OS dédié au routage par défaut. Ce n'est bien évidemment une opération qui n'est pas nécessaire sur un équipement routeur dédié comme du matériel Cisco.
+```
+$ sudo firewall-cmd --list-all
+public (active)
+  interfaces: enp0s3 enp0s8
+  forward: yes
+  masquerade: yes
+```
 
 🌞**Ajouter les routes statiques nécessaires pour que `john` et `marcel` puissent se `ping`**
-
-- il faut taper une commande `ip route add` pour cela, voir mémo
-- il faut ajouter une seule route des deux côtés
-- une fois les routes en place, vérifiez avec un `ping` que les deux machines peuvent se joindre
-
-![THE SIZE](./pics/thesize.png)
-
+```
+$ ip a //router
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:60:44:b4 brd ff:ff:ff:ff:ff:ff
+    inet 10.3.2.254/24 brd 10.3.2.255 scope global noprefixroute enp0s3
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe60:44b4/64 scope link
+       valid_lft forever preferred_lft forever
+3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:39:c7:51 brd ff:ff:ff:ff:ff:ff
+    inet 10.3.1.254/24 brd 10.3.1.255 scope global noprefixroute enp0s8
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe39:c751/64 scope link
+       valid_lft forever preferred_lft forever
 ### 2. Analyse de trames
+```
+```
+$ ip a //john
+2: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:51:f2:b5 brd ff:ff:ff:ff:ff:ff
+    inet 10.3.1.11/24 brd 10.3.1.255 scope global noprefixroute enp0s8
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe51:f2b5/64 scope link
+       valid_lft forever preferred_lft forever
+
+$ sudo ip r add 10.3.2.12 via 10.3.1.254
+```
+``` 
+$ ip a //marcel
+2: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:cb:e1:e9 brd ff:ff:ff:ff:ff:ff
+    inet 10.3.2.12/24 brd 10.3.2.255 scope global noprefixroute enp0s8
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fecb:e1e9/64 scope link
+       valid_lft forever preferred_lft forever
+
+$ sudo ip r add 10.3.1.11 via 10.3.2.254
+
+$ ping 10.3.1.11
+PING 10.3.1.11 (10.3.1.11) 56(84) bytes of data.
+64 bytes from 10.3.1.11: icmp_seq=1 ttl=63 time=0.843 ms
+64 bytes from 10.3.1.11: icmp_seq=2 ttl=63 time=1.51 ms
+64 bytes from 10.3.1.11: icmp_seq=3 ttl=63 time=1.84 ms
+^C
+--- 10.3.1.11 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2017ms
+rtt min/avg/max/mdev = 0.843/1.394/1.835/0.412 ms
+```
 
 🌞**Analyse des échanges ARP**
 
@@ -92,19 +144,18 @@ Vous aurez besoin de 3 VMs pour cette partie. **Réutilisez les deux VMs précé
 - répétez l'opération précédente (vider les tables, puis `ping`), en lançant `tcpdump` sur `marcel`
 - **écrivez, dans l'ordre, les échanges ARP qui ont eu lieu, puis le ping et le pong, je veux TOUTES les trames** utiles pour l'échange
 
-Par exemple (copiez-collez ce tableau ce sera le plus simple) :
-
 | ordre | type trame  | IP source | MAC source              | IP destination | MAC destination            |
 |-------|-------------|-----------|-------------------------|----------------|----------------------------|
-| 1     | Requête ARP | x         | `marcel` `AA:BB:CC:DD:EE` | x              | Broadcast `FF:FF:FF:FF:FF` |
-| 2     | Réponse ARP | x         | ?                       | x              | `marcel` `AA:BB:CC:DD:EE`    |
-| ...   | ...         | ...       | ...                     |                |                            |
-| ?     | Ping        | ?         | ?                       | ?              | ?                          |
-| ?     | Pong        | ?         | ?                       | ?              | ?                          |
+| 1     | Requête ARP | 10.3.1.11         | `john` `08:00:27:39:c7:51`  | 10.3.1.254              | Broadcast `FF:FF:FF:FF:FF` |
+| 2     | Réponse ARP | 10.3.1.254         | `router ` ` 08:00:27:39:c7:51`                       | 10.3.1.11              | `john` `08:00:27:39:c7:51`     |
+| 3   | Ping         | 10.3.1.11       | `john` `08:00:27:39:c7:51`             |10.3.2.12                | `router ` ` 08:00:27:39:c7:51`                            |
+| 4   | Requête ARP  | 10.3.2.254          | `router ` ` 08:00:27:60:44:b4`                        |10.3.2.12                     | Broadcast `FF:FF:FF:FF:FF`|
+| 5   | Réponse ARP  | 10.3.2.12           | `marcel` ` 08:00:27:cb:e1:e9`                  |10.3.2.254                     | `router ` ` 08:00:27:60:44:b4`     |
+| 6   | Ping         | 10.3.2.254           | `router ` ` 08:00:27:60:44:b4`                        |10.3.2.12                      | `marcel` ` 08:00:27:cb:e1:e9`                              |
+| 7     | Pong        | 10.3.2.12         | `marcel` ` 08:00:27:cb:e1:e9`                        | 10.3.2.254              | `router ` ` 08:00:27:60:44:b4 `                          |
+| 8     | Pong        | 10.3.2.12        | `router ` ` 08:00:27:39:c7:51`                       | 10.3.1.11              | `john` `08:00:27:39:c7:51`                           |
 
-> Vous pourriez, par curiosité, lancer la capture sur `john` aussi, pour voir l'échange qu'il a effectué de son côté.
 
-🦈 **Capture réseau `tp3_routage_marcel.pcapng`**
 
 ### 3. Accès internet
 
